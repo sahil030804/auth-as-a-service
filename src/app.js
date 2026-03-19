@@ -3,6 +3,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const pinoHttp = require("pino-http");
 const logger = require("./config/logger");
+const { connectAllDatabases } = require("./lib/postgres");
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(
   }),
 );
 
+connectAllDatabases();
 // Health check
 app.get("/health", (req, res) => {
   req.log.info("Health check called");

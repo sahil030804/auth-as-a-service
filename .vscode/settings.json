@@ -1,0 +1,14 @@
+{
+    "files.watcherExclude": {
+        "**/node_modules/**": true
+    },
+    "eslint.format.enable": true,
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "notebook.defaultFormatter": "dbaeumer.vscode-eslint",
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    }
+}
