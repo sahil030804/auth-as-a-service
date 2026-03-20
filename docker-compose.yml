@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  user-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: identity_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+
+  token-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: token_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - token_db_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: services/identity/Dockerfile
+    environment:
+      - PORT=3001
+      - USER_DB_URL=postgresql://user:password@user-db:5432/identity_db
+      - TOKEN_SERVICE_URL=token-service:50051
+      - RABBITMQ_URL=amqp://rabbitmq
+    ports:
+      - "3001:3001"
+    depends_on:
+      - user-db
+      - token-service
+      - rabbitmq
+
+  token-service:
+    build:
+      context: .
+      dockerfile: services/token/Dockerfile
+    environment:
+      - GRPC_PORT=50051
+      - TOKEN_DB_URL=postgresql://user:password@token-db:5432/token_db
+      - JWT_SECRET=supersecret
+      - REFRESH_SECRET=refreshsecret
+    ports:
+      - "50051:50051"
+    depends_on:
+      - token-db
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification/Dockerfile
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - rabbitmq
+
+volumes:
+  user_db_data:
+  token_db_data:
