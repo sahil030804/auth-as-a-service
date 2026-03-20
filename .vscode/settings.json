@@ -10,5 +10,8 @@
     "notebook.defaultFormatter": "dbaeumer.vscode-eslint",
     "[jsonc]": {
         "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[dockercompose]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
     }
 }

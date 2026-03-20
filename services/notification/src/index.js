@@ -1,58 +1,54 @@
-require('dotenv').config();
-const amqp = require('amqplib');
-const { Resend } = require('resend');
-const pino = require('pino');
+const pino = require("pino");
+const { NOTIFICATION_WORKERS } = require("common");
+// Use the local lib, don't reach into identity service!
+const { createWorker } = require("./lib/rabbitMq");
+const { messaging } =
+  require("./config")[process.env.NODE_ENV || "development"];
+const emailService = require("./components/email/email.service");
+const amqp = require("amqplib");
 
 const logger = pino({
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true
-    }
-  }
+  transport: { target: "pino-pretty", options: { colorize: true } },
 });
-
-// Initialize Resend with your API key
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const start = async () => {
   try {
-    const connection = await amqp.connect(process.env.RABBITMQ_URL || 'amqp://localhost');
+    // 1. Connect and get the channel
+    const connection = await amqp.connect(messaging.rabbitMqUrl);
+
+    if (!connection) {
+      throw new Error("Could not initialize RabbitMQ channel");
+    }
+
     const channel = await connection.createChannel();
-    const exchange = 'user_events';
-    const queue = 'notification_queue';
 
-    await channel.assertExchange(exchange, 'topic', { durable: true });
-    const q = await channel.assertQueue(queue, { exclusive: false });
+    for (const workerCfg of NOTIFICATION_WORKERS) {
+      // 3. Look up the logic in our local email service
+      const processorFn = emailService[workerCfg.processor].bind(emailService);
 
-    await channel.bindQueue(q.queue, exchange, 'user.created');
-
-    logger.info(`✅ Notification Service listening on queue: ${q.queue}`);
-
-    channel.consume(q.queue, async (msg) => {
-      if (msg !== null) {
-        const event = JSON.parse(msg.content.toString());
-        logger.info({ event }, 'Received user event, sending notification...');
-        
-        try {
-          // Send real email using Resend
-          await resend.emails.send({
-            from: 'onboarding@resend.dev',
-            to: event.payload.email,
-            subject: 'Welcome to our platform!',
-            html: `<p>Congrats on joining our platform! Your account has been successfully created.</p>`
-          });
-          
-          logger.info(`📧 Email sent successfully to: ${event.payload.email}`);
-        } catch (emailError) {
-          logger.error({ emailError }, 'Failed to send email');
-        }
-        
-        channel.ack(msg);
+      if (typeof processorFn !== "function") {
+        logger.error(`❌ No processor found for: ${workerCfg.processor}`);
+        continue;
       }
-    });
+
+      // 4. Start the worker
+      await createWorker(
+        channel,
+        {
+          exchange: workerCfg.exchange,
+          queue: workerCfg.queue,
+          routingKey: workerCfg.routingKey,
+        },
+        async (event) => {
+          // 'event' is the full message, 'event.payload' is the user data
+          await processorFn(event.payload);
+        },
+      );
+    }
+
+    logger.info("🚀 Notification Service Workers initialized");
   } catch (error) {
-    logger.error('🛑 Notification Service RabbitMQ error:', error.message);
+    logger.error(`🛑 Startup Error: ${error.message}`);
     process.exit(1);
   }
 };

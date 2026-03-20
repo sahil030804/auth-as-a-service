@@ -1,25 +1,30 @@
-const { Pool } = require('pg');
-const logger = require('../config/logger');
+const { Pool } = require("pg");
+const logger = require("../config/logger");
+const { database } =
+  require("../config")[process.env.NODE_ENV || "development"];
 
 const pool = new Pool({
-  connectionString: process.env.USER_DB_URL,
+  connectionString: database.userDbUrl,
   max: 20,
   idleTimeoutMillis: 30000,
 });
 
-pool.on('error', (err) => logger.error('❌ Identity DB Error:', err));
+pool.on("error", (err) => logger.error("❌ Identity DB Error:", err));
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const connectDB = async (retries = 5) => {
   while (retries > 0) {
     try {
-      await pool.query('SELECT 1');
-      logger.info('✅ Identity Postgres Connected');
+      await pool.query("SELECT 1");
+      logger.info("✅ Identity Postgres Connected");
       return;
     } catch (error) {
       retries--;
-      logger.error(`🛑 Identity DB Startup Failed (Retries left: ${retries}):`, error.message);
+      logger.error(
+        `🛑 Identity DB Startup Failed (Retries left: ${retries}):`,
+        error.message,
+      );
       if (retries === 0) process.exit(1);
       await sleep(5000);
     }
@@ -28,5 +33,5 @@ const connectDB = async (retries = 5) => {
 
 module.exports = {
   pool,
-  connectDB
+  connectDB,
 };

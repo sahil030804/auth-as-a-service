@@ -1,11 +1,10 @@
-require('dotenv').config();
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const { pool, connectDB } = require('./lib/postgres');
 const logger = require('./config/logger');
-
+const {application} = require('./config')[process.env.NODE_ENV || 'development'];
 const PROTO_PATH = path.resolve(__dirname, '../../../proto/token.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
@@ -70,7 +69,7 @@ const main = async () => {
     VerifyToken: verifyToken,
   });
 
-  const PORT = process.env.GRPC_PORT || '50051';
+  const PORT = application.grpcPort || '50051';
   server.bindAsync(`0.0.0.0:${PORT}`, grpc.ServerCredentials.createInsecure(), (err, port) => {
     if (err) {
       logger.error(err, 'Failed to bind gRPC server');

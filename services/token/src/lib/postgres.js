@@ -1,8 +1,8 @@
 const { Pool } = require('pg');
 const logger = require('../config/logger');
-
+const {database} = require('../config')[process.env.NODE_ENV || 'development'];
 const pool = new Pool({
-  connectionString: process.env.TOKEN_DB_URL,
+  connectionString: database.tokenDbUrl,
   max: 10,
   idleTimeoutMillis: 30000,
 });
