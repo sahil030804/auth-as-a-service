@@ -1,14 +1,23 @@
-const { Client } = require('pg');
+const { Client } = require("pg");
+require("dotenv").config();
 
 const runMigration = async () => {
-    const client = new Client({
-        connectionString: process.env.TOKEN_DB_URL
-    });
+  const rootClient = new Client({
+    connectionString: process.env.ROOT_DB_URL,
+  });
 
-    try {
-        await client.connect();
-        console.log("🔑 Creating tables in token_db...");
-        await client.query(`
+  await rootClient.connect();
+  await rootClient.query(`CREATE DATABASE token_db`);
+  await rootClient.end();
+
+  const client = new Client({
+    connectionString: process.env.TOKEN_DB_URL,
+  });
+
+  try {
+    await client.connect();
+    console.log("🔑 Creating tables in token_db...");
+    await client.query(`
       CREATE TABLE IF NOT EXISTS refresh_tokens (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
@@ -16,12 +25,12 @@ const runMigration = async () => {
         expires_at TIMESTAMP NOT NULL
       );
     `);
-        await client.end();
-        console.log("✅ Token migrations completed successfully!");
-    } catch (err) {
-        console.error("❌ Token migration failed:", err.message);
-        process.exit(1);
-    }
+    await client.end();
+    console.log("✅ Token migrations completed successfully!");
+  } catch (err) {
+    console.error("❌ Token migration failed:", err.message);
+    process.exit(1);
+  }
 };
 
 runMigration();
