@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package featureflag;
+
+service FeatureFlagService {
+  rpc GetFlag(GetFlagRequest) returns (FlagResponse);
+  rpc UpdateFlag(UpdateFlagRequest) returns (FlagResponse);
+  rpc GetAllFlags(Empty) returns (FlagsResponse);
+  rpc DeleteFlag(DeleteFlagRequest) returns (StatusResponse);
+  rpc ClearCache(ClearCacheRequest) returns (StatusResponse);
+  rpc CreateFlag(CreateFlagRequest) returns (FlagResponse);
+  rpc GetFlagsByCategory(CategoryRequest) returns (FlagsResponse);
+  rpc BulkUpdateFlags(BulkUpdateRequest) returns (BulkUpdateResponse);
+}
+
+message GetFlagRequest {
+  string key = 1;
+  string user_id = 2; // Optional: for user-specific flags
+  string context = 3; // Optional: for context-specific flags
+}
+
+message CreateFlagRequest {
+  string key = 1;
+  bool enabled = 2;
+  string config = 3; // JSON string
+  string description = 4;
+  string category = 5;
+  bool public = 6; // Whether flag is accessible to public users
+  map<string, string> metadata = 7;
+}
+
+message UpdateFlagRequest {
+  string key = 1;
+  bool enabled = 2;
+  string config = 3; // JSON string
+  string description = 4;
+  map<string, string> metadata = 5;
+}
+
+message DeleteFlagRequest {
+  string key = 1;
+}
+
+message ClearCacheRequest {
+  string key = 1; // empty string clears all
+}
+
+message CategoryRequest {
+  string category = 1;
+}
+
+message BulkUpdateRequest {
+  repeated FlagUpdate updates = 1;
+}
+
+message FlagUpdate {
+  string key = 1;
+  bool enabled = 2;
+  string config = 3;
+}
+
+message FlagResponse {
+  string key = 1;
+  bool enabled = 2;
+  string config = 3; // JSON string
+  string description = 4;
+  string category = 5;
+  bool public = 6;
+  map<string, string> metadata = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message FlagsResponse {
+  repeated FlagResponse flags = 1;
+}
+
+message BulkUpdateResponse {
+  repeated FlagResponse updated_flags = 1;
+  repeated string failed_keys = 2;
+}
+
+message StatusResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message Empty {}
